@@ -275,7 +275,7 @@
   ring.style.strokeDashoffset = CIRC;
 
   // ---- breathing rhythm (seconds): calming, with a longer exhale ----
-  var PH = { in: 8, hold: 3, out: 13 };
+  var PH = { in: 5, hold: 4, out: 6 };
   var CYCLE = PH.in + PH.hold + PH.out;
   var MIN = 0.80, MAX = 1.14;
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
