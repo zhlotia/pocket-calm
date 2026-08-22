@@ -275,7 +275,7 @@
   ring.style.strokeDashoffset = CIRC;
 
   // ---- breathing rhythm (seconds): calming, with a longer exhale ----
-  var PH = { in: 4, hold: 1.5, out: 6.5 };
+  var PH = { in: 8, hold: 3, out: 13 };
   var CYCLE = PH.in + PH.hold + PH.out;
   var MIN = 0.80, MAX = 1.14;
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
@@ -323,7 +323,9 @@
 
   // recorded voice cues (your own recordings) — device voice is only a fallback
   var CUE_FILES = { "Breathe in": "audio/breathe-in.m4a", "Hold": "audio/hold.m4a", "Breathe out": "audio/breathe-out.m4a" };
-  var cueAudio = {}, cuesLoaded = false;
+  // stop each clip just after the spoken word, trimming the trailing background hiss (seconds)
+  var CUE_STOP = { "Breathe in": 1.5, "Hold": 1.4, "Breathe out": 2.15 };
+  var cueAudio = {}, cuesLoaded = false, stopTimer = 0;
   function preloadCues() {
     if (cuesLoaded) return; cuesLoaded = true;
     for (var k in CUE_FILES) {
@@ -335,9 +337,12 @@
     var a = cueAudio[text];
     if (a) {
       try {
+        clearTimeout(stopTimer);
         a.currentTime = 0;
         var p = a.play();
         if (p && p.catch) p.catch(function () { speak(text); });   // clip missing/unplayable → device voice
+        var stopAt = CUE_STOP[text];
+        if (stopAt) stopTimer = setTimeout(function () { try { a.pause(); } catch (e) {} }, stopAt * 1000);
         return;
       } catch (e) {}
     }
@@ -354,6 +359,7 @@
     } catch (e) {}
   }
   function hush() {
+    clearTimeout(stopTimer);
     try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
     for (var k in cueAudio) { try { cueAudio[k].pause(); cueAudio[k].currentTime = 0; } catch (e) {} }
   }
