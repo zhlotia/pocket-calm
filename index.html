@@ -322,7 +322,7 @@
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener("voiceschanged", pickVoice); }
 
   // recorded voice cues (your own recordings) — device voice is only a fallback
-  var CUE_FILES = { "Breathe in": "audio/breathe-in.mp3", "Hold": "audio/hold.mp3", "Breathe out": "audio/breathe-out.mp3" };
+  var CUE_FILES = { "Breathe in": "audio/breathe-in.m4a", "Hold": "audio/hold.m4a", "Breathe out": "audio/breathe-out.m4a" };
   var cueAudio = {}, cuesLoaded = false;
   function preloadCues() {
     if (cuesLoaded) return; cuesLoaded = true;
