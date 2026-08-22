@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pocket Calm — a little breathing space</title>
+<meta name="description" content="A gentle 1, 5, or 8-minute breathing meditation for busy days. Breathe with your little cloud companion." />
+<meta name="theme-color" content="#E4D6E2" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sky-1: #C7CBE8;   /* periwinkle top   */
+    --sky-2: #E6D7E3;   /* soft mauve mid   */
+    --sky-3: #FBE6D9;   /* warm blush base  */
+    --ink:    #4C4663;  /* soft plum ink    */
+    --ink-soft:#8B84A2;
+    --cloud:  #FDF7F0;  /* warm-white body  */
+    --cloud-sh:#F3E4D8; /* underside shade  */
+    --glow:   #FBD9BE;  /* warm halo        */
+    --cheek:  #F2ABA3;  /* rosy cheeks      */
+    --accent: #8E86C4;  /* dusty periwinkle */
+    --accent-deep:#6E66A8;
+    --card:   rgba(255,255,255,.55);
+    --card-line: rgba(76,70,99,.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: "Nunito", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(170deg, var(--sky-1) 0%, var(--sky-2) 48%, var(--sky-3) 100%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 20px;
+    overflow: hidden;
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 400px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    min-height: min(680px, 92dvh);
+  }
+
+  /* ---- soft drifting motes ---- */
+  .ambience { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .mote {
+    position: absolute; bottom: -10px; border-radius: 50%;
+    background: rgba(255,255,255,.55);
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) scale(1); opacity: 0; }
+    15%  { opacity: .7; }
+    85%  { opacity: .5; }
+    100% { transform: translateY(-102dvh) scale(1.2); opacity: 0; }
+  }
+
+  /* ---- masthead ---- */
+  .masthead { margin-top: 6px; transition: opacity .6s ease; }
+  .eyebrow {
+    font-family: "Quicksand", sans-serif; font-weight: 500;
+    color: var(--accent-deep); letter-spacing: .16em; text-transform: lowercase;
+    font-size: .82rem;
+  }
+  h1 {
+    font-family: "Quicksand", sans-serif; font-weight: 600;
+    font-size: 2rem; letter-spacing: .01em; color: var(--ink); margin-top: 2px;
+  }
+  .app.state-session .masthead { opacity: 0; pointer-events: none; }
+
+  /* ---- the stage: companion + progress ring ---- */
+  .stage {
+    position: relative; width: 300px; max-width: 82vw; aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    margin: auto 0;
+  }
+  .ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg);
+    opacity: 0; transition: opacity .7s ease; }
+  .app.state-session .ring { opacity: 1; }
+  .ring-track { fill: none; stroke: rgba(255,255,255,.45); stroke-width: 4; }
+  .ring-fill  { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+
+  .companion {
+    width: 66%; will-change: transform;
+    transform: scale(.9);
+  }
+  .companion svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .companion.idle { animation: idleBreath 8s ease-in-out infinite; }
+  @keyframes idleBreath {
+    0%, 100% { transform: scale(.88) translateY(0); }
+    50%      { transform: scale(.98) translateY(-6px); }
+  }
+  .glow { transform-box: fill-box; transform-origin: center; }
+
+  /* ---- panels (swap by state) ---- */
+  .panels { width: 100%; min-height: 168px; margin-top: 6px; }
+  .panel { display: none; animation: fadeUp .5s ease both; }
+  .app.state-home .panel-home { display: block; }
+  .app.state-session .panel-session { display: block; }
+  .app.state-done .panel-done { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .prompt {
+    font-family: "Quicksand", sans-serif; font-weight: 500; font-size: 1.06rem;
+    color: var(--ink); margin-bottom: 16px;
+  }
+  .durations { display: flex; gap: 12px; justify-content: center; }
+  .dur {
+    flex: 1 1 0; cursor: pointer; border: 1px solid var(--card-line);
+    background: var(--card); border-radius: 20px; padding: 16px 8px 13px;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    transition: transform .15s ease, box-shadow .25s ease, border-color .2s ease, background .2s ease;
+    color: var(--ink);
+  }
+  .dur b { font-family: "Quicksand", sans-serif; font-weight: 600; font-size: 1.7rem; line-height: 1; color: var(--accent-deep); }
+  .dur span { font-family: "Nunito", sans-serif; font-size: .74rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .08em; }
+  .dur small { font-family: "Quicksand", sans-serif; font-size: .78rem; color: var(--ink-soft); margin-top: 5px; }
+  .dur:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -14px rgba(76,70,99,.5); border-color: rgba(142,134,196,.5); }
+  .dur:active { transform: translateY(-1px); }
+
+  /* ---- session panel ---- */
+  .cue {
+    font-family: "Quicksand", sans-serif; font-weight: 400; font-size: 1.5rem;
+    letter-spacing: .03em; color: var(--ink); min-height: 1.4em;
+  }
+  .remaining {
+    font-family: "Nunito", sans-serif; font-variant-numeric: tabular-nums;
+    font-size: .95rem; font-weight: 700; color: var(--ink-soft); letter-spacing: .06em;
+    margin-top: 8px;
+  }
+  .ghost {
+    margin-top: 20px; cursor: pointer; background: transparent;
+    border: 1px solid var(--card-line); color: var(--ink-soft);
+    font-family: "Nunito", sans-serif; font-weight: 700; font-size: .86rem;
+    padding: 9px 20px; border-radius: 14px;
+    transition: background .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .ghost:hover { background: rgba(255,255,255,.45); color: var(--ink); border-color: rgba(142,134,196,.45); }
+
+  /* ---- done panel ---- */
+  .done-title { font-family: "Quicksand", sans-serif; font-weight: 600; font-size: 1.4rem; color: var(--ink); }
+  .done-msg { font-family: "Quicksand", sans-serif; color: var(--ink-soft); font-size: 1rem; margin-top: 6px; line-height: 1.5; }
+  .done-actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+  .again {
+    flex: 0 0 auto; cursor: pointer; border: none;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+    color: #fff; font-family: "Nunito", sans-serif; font-weight: 800; font-size: .95rem;
+    padding: 12px 26px; border-radius: 15px;
+    box-shadow: 0 10px 20px -10px var(--accent-deep);
+    transition: transform .14s ease, box-shadow .2s ease;
+  }
+  .again:hover { transform: translateY(-2px); }
+
+  /* ---- mute toggle ---- */
+  .mute {
+    margin-top: 14px; cursor: pointer; background: transparent; border: none;
+    color: var(--ink-soft); font-family: "Nunito", sans-serif; font-weight: 700;
+    font-size: .78rem; letter-spacing: .02em; padding: 6px 10px; border-radius: 10px;
+    display: inline-flex; align-items: center; gap: 6px; opacity: .8;
+    transition: opacity .2s ease, color .2s ease;
+  }
+  .mute:hover { opacity: 1; color: var(--ink); }
+  .app.state-session .mute { opacity: 0; pointer-events: none; }
+
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 12px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mote { display: none; }
+    .companion.idle { animation: none; transform: scale(.92); }
+    .panel { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="ambience" id="ambience" aria-hidden="true"></div>
+
+  <main class="app state-home" id="app">
+    <header class="masthead">
+      <p class="eyebrow" id="greeting">a pocket of calm</p>
+      <h1>Pocket Calm</h1>
+    </header>
+
+    <div class="stage">
+      <svg class="ring" viewBox="0 0 260 260" aria-hidden="true">
+        <circle class="ring-track" cx="130" cy="130" r="120"/>
+        <circle class="ring-fill" id="ringFill" cx="130" cy="130" r="120"/>
+      </svg>
+
+      <div class="companion idle" id="companion">
+        <svg viewBox="0 0 200 172" role="img" aria-label="A calm little cloud companion">
+          <ellipse class="glow" cx="100" cy="96" rx="88" ry="72" fill="var(--glow)" opacity="0.5"/>
+          <!-- cloud body (fill-only, merges into one soft shape) -->
+          <g fill="var(--cloud)">
+            <ellipse cx="100" cy="124" rx="66" ry="30"/>
+            <circle cx="100" cy="92" r="48"/>
+            <circle cx="60" cy="104" r="34"/>
+            <circle cx="140" cy="104" r="34"/>
+            <circle cx="78" cy="74" r="31"/>
+            <circle cx="122" cy="74" r="31"/>
+          </g>
+          <ellipse cx="100" cy="132" rx="56" ry="16" fill="var(--cloud-sh)" opacity="0.5"/>
+          <!-- serene face -->
+          <ellipse cx="70" cy="104" rx="9" ry="5.5" fill="var(--cheek)" opacity="0.55"/>
+          <ellipse cx="130" cy="104" rx="9" ry="5.5" fill="var(--cheek)" opacity="0.55"/>
+          <path d="M60 92 Q70 100 80 92" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M120 92 Q130 100 140 92" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M90 108 Q100 116 110 108" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panels">
+      <!-- HOME -->
+      <div class="panel panel-home">
+        <p class="prompt">How long do you have?</p>
+        <div class="durations">
+          <button class="dur" data-min="1"><b>1</b><span>min</span><small>quick reset</small></button>
+          <button class="dur" data-min="5"><b>5</b><span>min</span><small>a real pause</small></button>
+          <button class="dur" data-min="8"><b>8</b><span>min</span><small>deep breath</small></button>
+        </div>
+      </div>
+
+      <!-- SESSION -->
+      <div class="panel panel-session">
+        <p class="cue" id="cue" aria-live="polite">Breathe in</p>
+        <p class="remaining" id="remaining">1:00</p>
+        <button class="ghost" id="endBtn">End early</button>
+      </div>
+
+      <!-- DONE -->
+      <div class="panel panel-done">
+        <p class="done-title">Well done 🫧</p>
+        <p class="done-msg" id="doneMsg">You took a moment for yourself.</p>
+        <div class="done-actions">
+          <button class="again" id="againBtn">Again</button>
+          <button class="ghost" id="doneBtn">All done</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="mute" id="mute" aria-pressed="false">
+      <span id="muteIcon" aria-hidden="true">🔔</span><span id="muteText">chimes on</span>
+    </button>
+  </main>
+
+<script>
+(function () {
+  "use strict";
+  var app = document.getElementById("app");
+  var companion = document.getElementById("companion");
+  var cueEl = document.getElementById("cue");
+  var remEl = document.getElementById("remaining");
+  var ring = document.getElementById("ringFill");
+  var doneMsg = document.getElementById("doneMsg");
+
+  // ---- time-of-day greeting ----
+  (function () {
+    var h = new Date().getHours();
+    var g = h < 12 ? "good morning" : h < 18 ? "good afternoon" : "good evening";
+    document.getElementById("greeting").textContent = g;
+  })();
+
+  // ---- progress ring geometry ----
+  var CIRC = 2 * Math.PI * 120;
+  ring.style.strokeDasharray = CIRC;
+  ring.style.strokeDashoffset = CIRC;
+
+  // ---- breathing rhythm (seconds): calming, with a longer exhale ----
+  var PH = { in: 4, hold: 1.5, out: 6.5 };
+  var CYCLE = PH.in + PH.hold + PH.out;
+  var MIN = 0.80, MAX = 1.14;
+  function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function fmt(s) { s = Math.max(0, Math.ceil(s)); var m = Math.floor(s / 60); var r = s % 60; return m + ":" + (r < 10 ? "0" : "") + r; }
+
+  // ---- soft chime (Web Audio, generated live — works offline) ----
+  var muted = false;
+  try { muted = localStorage.getItem("pocket-calm-muted") === "1"; } catch (e) {}
+  var actx = null;
+  function chime() {
+    if (muted) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === "suspended") actx.resume();
+      var now = actx.currentTime;
+      var master = actx.createGain();
+      master.gain.value = 0.9;
+      master.connect(actx.destination);
+      [523.25, 659.25].forEach(function (freq, i) {      // a soft, sweet interval (C5 + E5)
+        var o = actx.createOscillator(), g = actx.createGain();
+        o.type = "sine"; o.frequency.value = freq;
+        var t0 = now + i * 0.16;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(i ? 0.09 : 0.14, t0 + 0.06);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 3.2);
+        o.connect(g).connect(master);
+        o.start(t0); o.stop(t0 + 3.3);
+      });
+    } catch (e) { /* audio not available — the visual still guides */ }
+  }
+
+  // ---- mute toggle ----
+  var muteBtn = document.getElementById("mute");
+  function renderMute() {
+    document.getElementById("muteIcon").textContent = muted ? "🔕" : "🔔";
+    document.getElementById("muteText").textContent = muted ? "chimes off" : "chimes on";
+    muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+  }
+  muteBtn.addEventListener("click", function () {
+    muted = !muted;
+    try { localStorage.setItem("pocket-calm-muted", muted ? "1" : "0"); } catch (e) {}
+    renderMute();
+  });
+  renderMute();
+
+  // ---- session engine (wall-clock timed, so it stays accurate) ----
+  var duration = 0, startClock = 0, raf = 0, lastCue = "", running = false, finishTimer = 0, wakeLock = null;
+
+  function requestWake() {
+    try {
+      if ("wakeLock" in navigator && navigator.wakeLock.request) {
+        navigator.wakeLock.request("screen").then(function (wl) { wakeLock = wl; }, function () {});
+      }
+    } catch (e) {}
+  }
+  function releaseWake() {
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+  }
+
+  function frame() {
+    if (!running) return;
+    var t = (Date.now() - startClock) / 1000;
+    var remaining = duration - t;
+    if (remaining <= 0) { finish(); return; }
+
+    var pt = t % CYCLE, scale, cue;
+    if (pt < PH.in) {
+      scale = lerp(MIN, MAX, easeInOut(pt / PH.in)); cue = "Breathe in";
+    } else if (pt < PH.in + PH.hold) {
+      scale = MAX; cue = "Hold";
+    } else {
+      scale = lerp(MAX, MIN, easeInOut((pt - PH.in - PH.hold) / PH.out)); cue = "Breathe out";
+    }
+    companion.style.transform = "scale(" + scale.toFixed(3) + ")";
+
+    if (cue !== lastCue) {
+      lastCue = cue;
+      cueEl.textContent = cue;
+      if (cueEl.animate) cueEl.animate([{ opacity: 0.15 }, { opacity: 1 }], { duration: 700, easing: "ease" });
+    }
+
+    ring.style.strokeDashoffset = CIRC * (remaining / duration);
+    remEl.textContent = fmt(remaining);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function start(min) {
+    duration = min * 60; startClock = Date.now(); lastCue = ""; running = true;
+    app.className = "app state-session";
+    companion.classList.remove("idle");
+    remEl.textContent = fmt(duration);
+    cueEl.textContent = "Breathe in";
+    chime();
+    requestWake();
+    finishTimer = setTimeout(finish, duration * 1000 + 150);   // backup finish even if frames are throttled
+    raf = requestAnimationFrame(frame);
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(raf); raf = 0;
+    clearTimeout(finishTimer);
+    releaseWake();
+    companion.style.transform = "";
+    companion.classList.add("idle");
+    ring.style.strokeDashoffset = CIRC;
+  }
+
+  function finish() {
+    if (!running) return;                       // guard against double-fire (timer + frame)
+    var breaths = Math.max(1, Math.round(duration / CYCLE));
+    stop();
+    chime();
+    doneMsg.textContent = "You took " + breaths + " calm breath" + (breaths === 1 ? "" : "s") + ". Carry a little of it with you.";
+    app.className = "app state-done";
+  }
+
+  function home() { stop(); app.className = "app state-home"; }
+
+  // if the app is hidden then reopened, re-lock the screen and catch up the clock
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && running) {
+      requestWake();
+      if (Date.now() - startClock >= duration * 1000) finish();
+    }
+  });
+
+  // ---- wiring ----
+  var durEls = document.querySelectorAll(".dur[data-min]");
+  for (var i = 0; i < durEls.length; i++) {
+    durEls[i].addEventListener("click", function () { start(parseInt(this.getAttribute("data-min"), 10)); });
+  }
+  document.getElementById("endBtn").addEventListener("click", home);
+  document.getElementById("doneBtn").addEventListener("click", home);
+  document.getElementById("againBtn").addEventListener("click", home);
+
+  // ---- ambient motes ----
+  (function () {
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var amb = document.getElementById("ambience");
+    for (var k = 0; k < 9; k++) {
+      var m = document.createElement("span");
+      m.className = "mote";
+      var size = 4 + Math.random() * 8;
+      m.style.width = m.style.height = size + "px";
+      m.style.left = Math.random() * 100 + "vw";
+      m.style.animationDuration = (16 + Math.random() * 16) + "s";
+      m.style.animationDelay = (-Math.random() * 24) + "s";
+      m.style.opacity = 0.4 + Math.random() * 0.3;
+      amb.appendChild(m);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
