@@ -308,11 +308,35 @@
     } catch (e) { /* audio not available — the visual still guides */ }
   }
 
+  // ---- softly spoken breathing cues (device speech, offline) ----
+  var voice = null;
+  function pickVoice() {
+    if (!window.speechSynthesis) return;
+    var vs = speechSynthesis.getVoices();
+    if (!vs.length) return;
+    var nice = /aria|jenny|samantha|serena|libby|sonia|natural|google us english|zira/i;
+    voice = vs.filter(function (v) { return /^en/i.test(v.lang) && nice.test(v.name); })[0]
+         || vs.filter(function (v) { return /^en/i.test(v.lang); })[0]
+         || vs[0];
+  }
+  if (window.speechSynthesis) { pickVoice(); speechSynthesis.addEventListener("voiceschanged", pickVoice); }
+  function say(text) {
+    if (muted || !window.speechSynthesis) return;
+    try {
+      speechSynthesis.cancel();                 // never let cues stack up
+      var u = new SpeechSynthesisUtterance(text);
+      if (voice) u.voice = voice;
+      u.rate = 0.86; u.pitch = 1.0; u.volume = 0.85;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function hush() { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} }
+
   // ---- mute toggle ----
   var muteBtn = document.getElementById("mute");
   function renderMute() {
     document.getElementById("muteIcon").textContent = muted ? "🔕" : "🔔";
-    document.getElementById("muteText").textContent = muted ? "chimes off" : "chimes on";
+    document.getElementById("muteText").textContent = muted ? "sound off" : "sound on";
     muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
   }
   muteBtn.addEventListener("click", function () {
@@ -355,6 +379,7 @@
     if (cue !== lastCue) {
       lastCue = cue;
       cueEl.textContent = cue;
+      say(cue);                                 // speak the cue for eyes-closed sessions
       if (cueEl.animate) cueEl.animate([{ opacity: 0.15 }, { opacity: 1 }], { duration: 700, easing: "ease" });
     }
 
@@ -379,6 +404,7 @@
     running = false;
     cancelAnimationFrame(raf); raf = 0;
     clearTimeout(finishTimer);
+    hush();
     releaseWake();
     companion.style.transform = "";
     companion.classList.add("idle");
