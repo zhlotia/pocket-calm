@@ -275,9 +275,15 @@
   ring.style.strokeDashoffset = CIRC;
 
   // ---- breathing rhythm (seconds): calming, with a longer exhale ----
-  var PH = { in: 4, hold: 4, out: 6 };
-  var CYCLE = PH.in + PH.hold + PH.out;
   var MIN = 0.80, MAX = 1.14;
+  // one full cycle: breathe in → hold (full) → breathe out → hold (empty) → repeat
+  var PATTERN = [
+    { cue: "Breathe in",  dur: 4, from: MIN, to: MAX },
+    { cue: "Hold",        dur: 4, from: MAX, to: MAX },
+    { cue: "Breathe out", dur: 8, from: MAX, to: MIN },
+    { cue: "Hold",        dur: 4, from: MIN, to: MIN }
+  ];
+  var CYCLE = PATTERN.reduce(function (s, p) { return s + p.dur; }, 0);
   function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function fmt(s) { s = Math.max(0, Math.ceil(s)); var m = Math.floor(s / 60); var r = s % 60; return m + ":" + (r < 10 ? "0" : "") + r; }
@@ -398,14 +404,17 @@
     var remaining = duration - t;
     if (remaining <= 0) { finish(); return; }
 
-    var pt = t % CYCLE, scale, cue;
-    if (pt < PH.in) {
-      scale = lerp(MIN, MAX, easeInOut(pt / PH.in)); cue = "Breathe in";
-    } else if (pt < PH.in + PH.hold) {
-      scale = MAX; cue = "Hold";
-    } else {
-      scale = lerp(MAX, MIN, easeInOut((pt - PH.in - PH.hold) / PH.out)); cue = "Breathe out";
+    var pt = t % CYCLE, scale, cue, acc = 0;
+    for (var pi = 0; pi < PATTERN.length; pi++) {
+      var ph = PATTERN[pi];
+      if (pt < acc + ph.dur) {
+        scale = lerp(ph.from, ph.to, easeInOut((pt - acc) / ph.dur));
+        cue = ph.cue;
+        break;
+      }
+      acc += ph.dur;
     }
+    if (cue === undefined) { var lastPh = PATTERN[PATTERN.length - 1]; cue = lastPh.cue; scale = lastPh.to; }
     companion.style.transform = "scale(" + scale.toFixed(3) + ")";
 
     if (cue !== lastCue) {
